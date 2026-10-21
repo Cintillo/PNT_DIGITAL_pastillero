@@ -19,7 +19,7 @@ PALABRAS_FORMA_SOLIDA = ("TABLETA", "COMPRIMID", "CAPSULA", "GRAGEA")
 # o la liberación lenta del medicamento.
 PALABRAS_NO_PARTIBLE = ("LIBERACION PROLONGADA", "ENTERIC", "GASTRORRESI", "CAPSULA")
 
-DOSIS_MAXIMA_POR_TOMA = 4       # unidades por toma
+DOSIS_MAXIMA_POR_TOMA = 12      # unidades por toma
 UNIDADES_MAXIMAS_ENVASE = 1000
 
 
@@ -31,33 +31,36 @@ def normalizar(texto):
 
 
 def validar_nombre_paciente(texto):
-    """Acepta al menos 3 letras. Devuelve el nombre con mayúscula inicial."""
+    """Acepta solo letras (y espacios, guiones, apóstrofos o puntos), mínimo 3 letras."""
     limpio = " ".join(texto.split())
     if limpio == "":
         raise ValueError("Escriba el nombre del paciente. El campo está en blanco.")
     letras = [ch for ch in limpio if ch.isalpha()]
-    if len(letras) < 3:
-        raise ValueError(f"El nombre '{limpio}' es muy corto. Escriba al menos 3 letras, por ejemplo: Ana Rojas.")
+    if len(letras) == 0:
+        raise ValueError(f"'{limpio}' no contiene letras. Escriba el nombre del paciente, por ejemplo: Ana Rojas.")
     if any(ch.isdigit() for ch in limpio):
         raise ValueError(f"El nombre '{limpio}' tiene números. Escriba solo letras, por ejemplo: Ana Rojas.")
+    simbolos = [ch for ch in limpio if not ch.isalpha() and ch not in " -'."]
+    if simbolos:
+        raise ValueError(f"El nombre '{limpio}' tiene símbolos ({' '.join(sorted(set(simbolos)))}). "
+                         "Escriba solo letras, por ejemplo: Ana Rojas.")
+    if len(letras) < 3:
+        raise ValueError(f"El nombre '{limpio}' es muy corto. Escriba al menos 3 letras, por ejemplo: Ana Rojas.")
     return limpio.title()
 
 
-def validar_busqueda(texto):
-    """La búsqueda en el catálogo necesita al menos 3 caracteres."""
-    limpio = normalizar(texto)
-    if len(limpio) < 3:
-        raise ValueError("Escriba al menos 3 letras del medicamento o principio activo (ej.: irbesartan).")
-    return limpio
+def es_forma_solida(forma_farmaceutica):
+    """True si es tableta, comprimido, cápsula o gragea (lo que cabe en el SPD)."""
+    forma = normalizar(forma_farmaceutica).upper()
+    return any(palabra in forma for palabra in PALABRAS_FORMA_SOLIDA)
 
 
 def validar_forma_solida(forma_farmaceutica):
     """Solo los sólidos orales (tabletas, comprimidos, cápsulas) van en el pastillero."""
-    forma = normalizar(forma_farmaceutica).upper()
-    if not any(palabra in forma for palabra in PALABRAS_FORMA_SOLIDA):
+    if not es_forma_solida(forma_farmaceutica):
         raise ValueError(
             f"Este medicamento es '{forma_farmaceutica.lower()}'. En el pastillero solo van "
-            "tabletas, comprimidos o cápsulas. Elija otra presentación."
+            "tabletas, comprimidos, cápsulas o grageas. Elija otra presentación."
         )
     return forma_farmaceutica
 

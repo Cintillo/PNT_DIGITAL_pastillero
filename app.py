@@ -19,8 +19,8 @@ from pathlib import Path
 import streamlit as st
 
 from validaciones import (
+    es_forma_solida,
     normalizar,
-    validar_busqueda,
     validar_dosis,
     validar_forma_solida,
     validar_no_repetido,
@@ -32,7 +32,6 @@ from validaciones import (
 RUTA_CATALOGO = Path(__file__).parent / "datos" / "lomet_dic_2024.csv"
 TOMAS = ["Desayuno", "Almuerzo", "Cena", "Noche"]
 DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-MAXIMO_RESULTADOS = 50
 FRACCIONES = {0.25: "¼", 0.5: "½", 0.75: "¾"}
 
 
@@ -42,8 +41,10 @@ FRACCIONES = {0.25: "¼", 0.5: "½", 0.75: "¾"}
 @st.cache_data
 def cargar_catalogo(ruta):
     """
-    Lee el CSV del LOMET y devuelve un diccionario {registro_sanitario: fila}.
-    Omite los productos marcados como vencidos o descontinuados.
+    Lee el CSV del LOMET y devuelve un diccionario {registro_sanitario: fila},
+    ordenado por principio activo. Solo deja los sólidos orales que caben en
+    el SPD (tabletas, comprimidos, cápsulas, grageas) y omite los productos
+    marcados como vencidos o descontinuados.
     """
     catalogo = {}
     with open(ruta, encoding="utf-8") as archivo:
@@ -51,18 +52,16 @@ def cargar_catalogo(ruta):
             notas = normalizar(fila["notas"])
             if "vencido" in notas or "descontinu" in notas:
                 continue
+            if not es_forma_solida(fila["forma_farmaceutica"]):
+                continue
             catalogo[fila["registro_sanitario"]] = fila
-    return catalogo
+    return dict(sorted(catalogo.items(),
+                       key=lambda par: (normalizar(par[1]["principio_activo"]), par[1]["nombre_comercial"])))
 
 
-def buscar_en_catalogo(catalogo, texto_normalizado):
-    """Devuelve los registros cuyo principio activo o nombre comercial contienen el texto."""
-    encontrados = []
-    for registro, fila in catalogo.items():
-        nombres = normalizar(fila["principio_activo"] + " " + fila["nombre_comercial"])
-        if texto_normalizado in nombres:
-            encontrados.append(registro)
-    return encontrados
+def etiqueta_medicamento(fila):
+    """Texto que se ve (y se busca) en la barra: principio activo, nombre comercial y forma."""
+    return f"{fila['principio_activo']} — {fila['nombre_comercial']} ({fila['forma_farmaceutica'].lower()})"
 
 
 # ---------------------------------------------------------------------
@@ -144,32 +143,18 @@ def seccion_paciente():
 def seccion_agregar_medicamento():
     """Paso 2: buscar en el LOMET, pedir dosis, tomas, días y unidades, y agregar."""
     st.subheader("2. Agregar medicamento")
-    texto_busqueda = st.text_input("Buscar en el LOMET (principio activo o nombre comercial)",
-                                   placeholder="Ej.: irbesartan, levotiroxina, atorvastatina")
-    if texto_busqueda.strip() == "":
-        st.caption(f"El catálogo tiene {len(catalogo)} medicamentos vigentes.")
-        return
-
-    try:
-        texto_normalizado = validar_busqueda(texto_busqueda)
-    except ValueError as error:
-        st.warning(str(error))
-        return
-
-    encontrados = buscar_en_catalogo(catalogo, texto_normalizado)
-    if not encontrados:
-        st.warning(f"No encontré '{texto_busqueda.strip()}' en el LOMET. Revise la ortografía o "
-                   "busque por el principio activo (ej.: 'levotiroxina' en vez de 'Eutirox').")
-        return
-    if len(encontrados) > MAXIMO_RESULTADOS:
-        st.info(f"Hay {len(encontrados)} resultados; muestro los primeros {MAXIMO_RESULTADOS}. Escriba más letras para afinar.")
-        encontrados = encontrados[:MAXIMO_RESULTADOS]
-
+    # Barra con texto predictivo: al escribir, Streamlit filtra las opciones.
     registro = st.selectbox(
-        "Elija la presentación",
-        encontrados,
-        format_func=lambda r: f"{catalogo[r]['nombre_comercial']} — {catalogo[r]['forma_farmaceutica'].lower()}",
+        "Buscar en el LOMET (principio activo o nombre comercial)",
+        list(catalogo),
+        index=None,
+        placeholder="Escriba para buscar. Ej.: irbesartan, eutirox, atorvastatina",
+        format_func=lambda r: etiqueta_medicamento(catalogo[r]),
     )
+    st.caption(f"El catálogo tiene {len(catalogo)} presentaciones vigentes de sólidos orales "
+               "(tabletas, comprimidos, cápsulas y grageas).")
+    if registro is None:
+        return
 
     try:
         fila = catalogo[registro]

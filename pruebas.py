@@ -31,12 +31,17 @@ def probar():
     assert validar_dosis("1 1/2", "TABLETA") == 1.5
     assert validar_unidades_envase(" 30 ") == 30
     assert validar_forma_solida("CÁPSULA") == "CÁPSULA"
+    assert validar_forma_solida("GRAGEA") == "GRAGEA"
+    assert validar_dosis("12") == 12                           # el máximo por toma
 
     # Lo que debe RECHAZAR
     assert rechaza(validar_nombre_paciente, "   ")
     assert rechaza(validar_nombre_paciente, "Jo")
     assert rechaza(validar_nombre_paciente, "Ana 123")
+    assert rechaza(validar_nombre_paciente, "#$#$@")           # sin letras
+    assert rechaza(validar_nombre_paciente, "Ana@Rojas")       # con símbolos
     assert rechaza(validar_dosis, "")
+    assert rechaza(validar_dosis, "13")                        # más de 12 por toma
     assert rechaza(validar_dosis, "dos")
     assert rechaza(validar_dosis, "-1")
     assert rechaza(validar_dosis, "0")
