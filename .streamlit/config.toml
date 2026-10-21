@@ -1,0 +1,7 @@
+[theme]
+primaryColor = "#1F4E79"
+
+[client]
+# Red de seguridad: si algo se escapara de las validaciones, el usuario ve un
+# aviso corto y no el traceback rojo. Las validaciones son la defensa principal.
+showErrorDetails = false

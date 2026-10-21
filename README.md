@@ -1,0 +1,26 @@
+# 💊 Pastillero semanal con el catálogo LOMET
+
+App de Streamlit para farmacias y cuidadores en Costa Rica. Permite buscar los
+medicamentos de un paciente en el **Listado Oficial de Medicamentos (LOMET)** del
+Ministerio de Salud (corte 31/12/2024), armar su pastillero semanal y calcular
+para cuántos días alcanzan las tabletas y cuándo hay que reponer.
+
+Tarea corta 3, opción B — Python Express II (FUNDATEC).
+
+## Cómo se blindó
+
+- **Validación con funciones propias** (`validaciones.py`): cada dato tiene su
+  función, que lanza `raise ValueError("mensaje claro")` cuando el dato no sirve.
+- **Excepciones específicas**: `ValueError`, `KeyError`, `ZeroDivisionError`,
+  `FileNotFoundError` y `UnicodeDecodeError`. Nunca `except:` solo.
+- **Reglas de farmacia**: solo entran sólidos orales (no jarabes ni inyectables),
+  la dosis se parte como máximo en cuartos, y las cápsulas o tabletas de
+  liberación prolongada/entéricas no se pueden partir.
+- **Pruebas**: `python3 pruebas.py` corre los `assert` de los validadores.
+
+## Correrla en su computadora
+
+```
+pip install -r requirements.txt
+streamlit run app.py
+```
